@@ -96,6 +96,7 @@ namespace Hash
             if (!string.IsNullOrEmpty(textBox1.Text))
             {
                 Clipboard.SetText(textBox1.Text);
+                lblStatus.Text = "Hash内容已复制到剪贴板中。";
             }
         }
 
