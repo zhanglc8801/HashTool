@@ -47,16 +47,21 @@
             this.progressBar1 = new System.Windows.Forms.ProgressBar();
             this.progressBar2 = new System.Windows.Forms.ProgressBar();
             this.lblStatus = new System.Windows.Forms.Label();
+            this.chkBox_uppercase = new System.Windows.Forms.CheckBox();
             this.SuspendLayout();
             // 
             // textBox1
             // 
             this.textBox1.AllowDrop = true;
+            this.textBox1.BackColor = System.Drawing.SystemColors.Window;
+            this.textBox1.Font = new System.Drawing.Font("新宋体", 9F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.textBox1.ForeColor = System.Drawing.SystemColors.InfoText;
             this.textBox1.Location = new System.Drawing.Point(12, 12);
             this.textBox1.Multiline = true;
             this.textBox1.Name = "textBox1";
+            this.textBox1.ReadOnly = true;
             this.textBox1.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBox1.Size = new System.Drawing.Size(835, 454);
+            this.textBox1.Size = new System.Drawing.Size(835, 446);
             this.textBox1.TabIndex = 0;
             this.textBox1.DragDrop += new System.Windows.Forms.DragEventHandler(this.textBox1_DragDrop);
             this.textBox1.DragEnter += new System.Windows.Forms.DragEventHandler(this.textBox1_DragEnter);
@@ -128,7 +133,7 @@
             this.chkBox_time.AutoSize = true;
             this.chkBox_time.Checked = true;
             this.chkBox_time.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkBox_time.Location = new System.Drawing.Point(649, 519);
+            this.chkBox_time.Location = new System.Drawing.Point(649, 505);
             this.chkBox_time.Name = "chkBox_time";
             this.chkBox_time.Size = new System.Drawing.Size(106, 22);
             this.chkBox_time.TabIndex = 11;
@@ -140,7 +145,7 @@
             this.chkBox_fileSize.AutoSize = true;
             this.chkBox_fileSize.Checked = true;
             this.chkBox_fileSize.CheckState = System.Windows.Forms.CheckState.Checked;
-            this.chkBox_fileSize.Location = new System.Drawing.Point(649, 563);
+            this.chkBox_fileSize.Location = new System.Drawing.Point(649, 533);
             this.chkBox_fileSize.Name = "chkBox_fileSize";
             this.chkBox_fileSize.Size = new System.Drawing.Size(106, 22);
             this.chkBox_fileSize.TabIndex = 12;
@@ -237,11 +242,24 @@
             this.lblStatus.TabIndex = 21;
             this.lblStatus.Text = "lblStatus";
             // 
+            // chkBox_uppercase
+            // 
+            this.chkBox_uppercase.AutoSize = true;
+            this.chkBox_uppercase.Checked = true;
+            this.chkBox_uppercase.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkBox_uppercase.Location = new System.Drawing.Point(649, 563);
+            this.chkBox_uppercase.Name = "chkBox_uppercase";
+            this.chkBox_uppercase.Size = new System.Drawing.Size(106, 22);
+            this.chkBox_uppercase.TabIndex = 22;
+            this.chkBox_uppercase.Text = "大写显示";
+            this.chkBox_uppercase.UseVisualStyleBackColor = true;
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(9F, 18F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(859, 597);
+            this.Controls.Add(this.chkBox_uppercase);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.progressBar2);
             this.Controls.Add(this.progressBar1);
@@ -291,6 +309,7 @@
         private System.Windows.Forms.ProgressBar progressBar1;
         private System.Windows.Forms.ProgressBar progressBar2;
         private System.Windows.Forms.Label lblStatus;
+        private System.Windows.Forms.CheckBox chkBox_uppercase;
     }
 }
 

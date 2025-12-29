@@ -3,6 +3,8 @@ using System.Runtime.Intrinsics.Arm;
 using System.Security.Cryptography;
 using System.Text;
 using static System.Net.WebRequestMethods;
+
+
 namespace Hash
 {
     public partial class Form1 : Form
@@ -11,11 +13,22 @@ namespace Hash
         public Form1()
         {
             InitializeComponent();
+            lblStatus.Text = "";
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void textBox1_DragEnter(object sender, DragEventArgs e)
         {
-            lblStatus.Text = "";
+            if (e.Data.GetDataPresent(DataFormats.FileDrop))
+                e.Effect = DragDropEffects.Copy;
+            else
+                e.Effect = DragDropEffects.None;
+        }
+
+        private async void textBox1_DragDrop(object sender, DragEventArgs e)
+        {
+            var files = e.Data.GetData(DataFormats.FileDrop) as string[];
+            if (files == null || files.Length == 0) return;
+            await ProgressHash(files);
         }
 
         private async void Btn_browse_Click(object sender, EventArgs e)
@@ -24,64 +37,9 @@ namespace Hash
             {
                 openFileDialog.Multiselect = true;
                 openFileDialog.Filter = "所有文件|*.*";
-                openFileDialog.Title = "选择多个文件";
-
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    // 获取所有选择的文件路径
-                    string[] files = openFileDialog.FileNames;
-                    int totalFiles = files.Length;
-                    progressBar1.Value = 0;
-                    progressBar2.Value = 0;
-                    // 创建新的取消 token
-                    cts = new CancellationTokenSource();
-                    var token = cts.Token;
-                    try
-                    {
-                        // 主循环：逐个计算文件
-                        for (int i = 0; i < totalFiles; i++)
-                        {
-                            string file = files[i];
-                            lblStatus.Text = $"正在计算：{Path.GetFileName(file)}";
-                            // 后台线程中执行多算法计算
-                            var result = await Task.Run(() =>
-                                ComputeFileHashesWithProgress(file, UpdateFileProgress, token), token
-                            );
-                            // 输出结果
-                            FileInfo fi = new FileInfo(file);
-                            long fileSize = fi.Length; // 字节数
-                            DateTime lastWriteTime = fi.LastWriteTime; // 最后修改时间
-                            if(chkBox_path.Checked)
-                                this.textBox1.Text += $"文件：{Path.GetFullPath(file)}\r\n";
-                            else
-                                this.textBox1.Text += $"文件：{Path.GetFileName(file)}\r\n";
-                            if (chkBox_size.Checked)
-                                this.textBox1.Text += $"文件大小：{fileSize:N0} 字节 ({fileSize / 1024.0 / 1024.0:F2} MB)\r\n";
-                            if(chkBox_time.Checked)
-                                this.textBox1.Text += $"最后修改时间：{lastWriteTime:yyyy-MM-dd HH:mm:ss}\r\n";
-                            foreach (var kv in result)
-                            {
-                                this.textBox1.Text += $"{kv.Key}：{kv.Value}\r\n";
-                            }
-                            this.textBox1.Text += "\r\n";
-                            // 更新总体进度
-                            int overallPercent = (int)(((i + 1) * 100.0) / totalFiles);
-                            UpdateOverallProgress(overallPercent);
-                        }
-                        lblStatus.Text = "全部计算完成！";
-                        progressBar1.Value = 100;
-                        progressBar2.Value = 100;
-                    }
-                    catch (Exception)
-                    {
-                        lblStatus.Text = "Hash计算已取消!";
-                    }
-                    finally
-                    {
-                        progressBar1.Value = 0;
-                        cts.Dispose();
-                        cts = null;
-                    }
+                    await ProgressHash(openFileDialog.FileNames);
                 }
             }
         }
@@ -120,6 +78,73 @@ namespace Hash
             }
         }
 
+        private async Task ProgressHash(string[] files)
+        {
+            int totalFiles = files.Length;
+            progressBar1.Value = 0;
+            progressBar2.Value = 0;
+            cts = new CancellationTokenSource();
+            var token = cts.Token;
+            try
+            {
+                for (int i = 0; i < totalFiles; i++)
+                {
+                    int fileIndex = i;
+                    string file = files[i];
+                    UpdateFileProgress(0);
+                    string fileName = Path.GetFileName(file);
+                    if (fileName.Length > 50)
+                        fileName = fileName.Substring(0, 50) + "...";
+                    lblStatus.Text = $"正在计算：{fileName}";
+                    var result = await Task.Run(() =>
+                        ComputeFileHashesWithProgress(
+                            file,
+                            percent =>
+                            {
+                                UpdateFileProgress(percent);
+                                int overallPercent = (int)(((fileIndex + percent / 100.0) / totalFiles) * 100);
+                                UpdateOverallProgress(overallPercent);
+                            },
+                            token
+                        ),
+                        token
+                    );
+
+                    FileInfo fi = new FileInfo(file);
+
+                    if (chkBox_fullPath.Checked)
+                        textBox1.Text += $"文件：{fi.FullName}\r\n";
+                    else
+                        textBox1.Text += $"文件：{fi.Name}\r\n";
+
+                    if (chkBox_fileSize.Checked)
+                        textBox1.Text += $"文件大小：{fi.Length:N0} 字节 ({fi.Length / 1024.0 / 1024.0:F2} MB)\r\n";
+
+                    if (chkBox_time.Checked)
+                        textBox1.Text += $"最后修改时间：{fi.LastWriteTime:yyyy-MM-dd HH:mm:ss}\r\n";
+
+                    foreach (var kv in result)
+                        textBox1.Text += $"{kv.Key}：{kv.Value}\r\n";
+
+                    textBox1.Text += "\r\n";
+                    UpdateFileProgress(100);
+                }
+
+                lblStatus.Text = "全部计算完成！";
+                progressBar1.Value = 100;
+                progressBar2.Value = 100;
+            }
+            catch (OperationCanceledException)
+            {
+                lblStatus.Text = "Hash计算已取消!";
+            }
+            finally
+            {
+                cts.Dispose();
+                cts = null;
+            }
+        }
+
         /// <summary>
         /// 计算文件的多种哈希（MD5 / SHA1 / SHA256 / CRC32）
         /// </summary>
@@ -130,19 +155,11 @@ namespace Hash
             long totalRead = 0;
             long totalLength = new FileInfo(filePath).Length;
 
-            // 初始化哈希算法集合
-            var algorithms = new Dictionary<string, HashAlgorithm>
-            {
-                { "MD5", MD5.Create() },
-                { "SHA1", SHA1.Create() },
-                { "SHA256", SHA256.Create() }
-            };
-            if(!chkBox_md5.Checked)
-                algorithms.Remove("MD5");
-            if (!chkBox_sha1.Checked)
-                algorithms.Remove("SHA1");
-            if (!chkBox_sha256.Checked)
-                algorithms.Remove("SHA256");
+            var algorithms = new Dictionary<string, HashAlgorithm>();
+
+            if (chkBox_md5.Checked) algorithms["MD5"] = MD5.Create();
+            if (chkBox_sha1.Checked) algorithms["SHA1"] = SHA1.Create();
+            if (chkBox_sha256.Checked) algorithms["SHA256"] = SHA256.Create();
 
             // CRC32 自定义实现
             CRC32 crc32 = new CRC32();
@@ -160,11 +177,11 @@ namespace Hash
                         algo.TransformBlock(buffer, 0, bytesRead, null, 0);
 
                     // 更新 CRC32
-                    if(chkBox_crc32.Checked)
+                    if (chkBox_crc32.Checked)
                         crc32.Update(buffer, 0, bytesRead);
 
                     totalRead += bytesRead;
-                    int percent = (int)((totalRead * 100) / totalLength);
+                    int percent = totalLength == 0 ? 100 : (int)((totalRead * 100) / totalLength);
                     progressCallback?.Invoke(percent);
                 }
                 // 完成哈希计算
@@ -175,11 +192,12 @@ namespace Hash
             var result = new Dictionary<string, string>();
             foreach (var kv in algorithms)
             {
-                result[kv.Key] = BitConverter.ToString(kv.Value.Hash).Replace("-", "").ToUpperInvariant();
+                string hash = BitConverter.ToString(kv.Value.Hash).Replace("-", "");
+                result[kv.Key] = chkBox_uppercase.Checked ? hash.ToUpperInvariant() : hash.ToLowerInvariant();
                 kv.Value.Dispose();
             }
             if (chkBox_crc32.Checked)
-                result["CRC32"] = crc32.HashString;
+                result["CRC32"] = chkBox_uppercase.Checked ? crc32.HashString.ToUpperInvariant() : crc32.HashString.ToLowerInvariant();
             return result;
         }
 
